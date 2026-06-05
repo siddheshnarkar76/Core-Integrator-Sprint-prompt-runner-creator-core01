@@ -1,4 +1,4 @@
-# Render Deployment Guide - Core Integrator Sprint
+# Render Deployment Guide - Core Integrator & Prompt Runner
 
 ## Prerequisites
 - GitHub repository with your code
@@ -14,28 +14,35 @@ git commit -m "Prepare for Render deployment"
 git push origin main
 ```
 
-### 2. Create Render Service
+### 2. Create Render Services (Blueprints)
 
 1. **Login to Render Dashboard**
    - Go to https://render.com
    - Sign in with GitHub
 
-2. **Create New Web Service**
-   - Click "New +" → "Web Service"
+2. **Deploy via Blueprints (Recommended)**
+   - Click "New +" → "Blueprint"
    - Connect your GitHub repository
-   - Select the `Core-Integrator-Sprint-1.1-` directory
+   - Render will automatically detect `render.yaml` and configure both services:
+     - `core-integrator-sprint` (Main Orchestrator)
+     - `prompt-runner-service` (AI Prompt Converter)
 
-3. **Configure Service Settings**
-   ```
-   Name: core-integrator-sprint
-   Environment: Python 3
-   Build Command: pip install -r requirements.txt
-   Start Command: python main.py
-   ```
+3. **Manual Configuration (If not using Blueprints)**
+   If you prefer manual setup, create two Web Services:
+   
+   **Service A: Core Integrator**
+   - Name: `core-integrator-sprint`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `python main.py`
+   
+   **Service B: Prompt Runner**
+   - Name: `prompt-runner-service`
+   - Build Command: `cd prompt-runner01 && pip install -r requirements.txt`
+   - Start Command: `cd prompt-runner01 && python -m uvicorn api:app --host 0.0.0.0 --port $PORT`
 
 ### 3. Environment Variables
-Set these in Render Dashboard → Environment:
 
+#### For `core-integrator-sprint`:
 ```
 DB_PATH=data/context.db
 NONCE_DB_PATH=data/nonce_store.db
@@ -44,7 +51,12 @@ INTEGRATOR_USE_NOOPUR=false
 USE_MONGODB=false
 LOG_LEVEL=INFO
 VIDEO_SERVICE_URL=http://localhost:5002
-PORT=10000
+```
+
+#### For `prompt-runner-service`:
+```
+GROQ_API_KEY=your_gsk_key_here
+CREATOR_CORE_URL=https://core-integrator-sprint.onrender.com
 ```
 
 ### 4. Advanced Settings

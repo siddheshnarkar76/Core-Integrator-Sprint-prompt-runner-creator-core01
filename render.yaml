@@ -23,3 +23,18 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
     healthCheckPath: /system/health
+
+  - type: web
+    name: prompt-runner-service
+    env: python
+    plan: starter
+    buildCommand: cd prompt-runner01 && pip install -r requirements.txt
+    startCommand: cd prompt-runner01 && python -m uvicorn api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CREATOR_CORE_URL
+        value: https://core-integrator-sprint.onrender.com
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /health
