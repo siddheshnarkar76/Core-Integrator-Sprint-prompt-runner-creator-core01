@@ -401,6 +401,47 @@ async def get_replay_statistics(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Replay statistics failed: {str(e)}")
 
+# COMPATIBILITY ENDPOINT FOR EXTERNAL PROMPT RUNNER
+@app.post("/creator-core/generate-blueprint")
+async def legacy_generate_blueprint(request: Dict[str, Any]):
+    """Compatibility endpoint for Prompt Runner in other repositories"""
+    try:
+        # Map legacy Prompt Runner instruction to Bridge CoreRequest
+        module = request.get("module", "creator")
+        intent = request.get("intent", "generate")
+        
+        # Route through main gateway
+        response = gateway.process_request(
+            module=module,
+            intent=intent,
+            user_id=request.get("user_id", "prompt_runner_legacy"),
+            data=request
+        )
+        
+        # Return format expected by Prompt Runner client
+        if response.get("status") == "success":
+            # If the response already contains a legacy-style blueprint in the result
+            if "blueprint" in response.get("result", {}):
+                return response["result"]
+            
+            # Construct a basic legacy-style envelope if needed
+            return {
+                "blueprint": {
+                    "instruction_id": response.get("execution_envelope", {}).get("execution_id", "unknown"),
+                    "origin": "creator_core",
+                    "intent_type": intent,
+                    "target_product": module,
+                    "payload": response.get("result", {}),
+                    "schema_version": "1.0.0",
+                    "timestamp": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+                }
+            }
+        else:
+            raise HTTPException(status_code=500, detail=response.get("message", "Processing failed"))
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8001))
